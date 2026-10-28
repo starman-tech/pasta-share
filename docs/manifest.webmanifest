@@ -1,0 +1,54 @@
+{
+  "name": "Pasta Share",
+  "short_name": "Pasta",
+  "description": "Envoie des fichiers entre ton téléphone et tes PC",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#081226",
+  "theme_color": "#081226",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "share_target": {
+    "action": "share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "*/*"
+          ]
+        }
+      ]
+    }
+  }
+}

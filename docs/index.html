@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3dfb6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#081226" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Pasta Share</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preload" href="fonts/silkscreen-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/pixelify-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/vt323-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="34" height="34">
+      <h1 data-text="PASTA//SHARE">PASTA//SHARE</h1>
+    </div>
+    <span id="status" class="status"><i></i><b>Connexion…</b></span>
+  </header>
+
+  <main>
+    <!-- bandeau : coucher de soleil sur l'océan + actions principales -->
+    <section class="horizon">
+      <div class="scene" aria-hidden="true"><i class="waves w1"></i><i class="waves w2"></i></div>
+      <div class="hud">
+        <label class="me" title="Renommer cet appareil">
+          <span>ID</span><input id="me" maxlength="40" enterkeyhint="done" spellcheck="false" autocomplete="off" aria-label="Nom de cet appareil"><em aria-hidden="true">✎</em>
+        </label>
+        <span id="clock" class="clock"></span>
+      </div>
+      <div id="hero" class="hero-actions" hidden>
+        <button data-pick="queue" class="cut send">
+          <svg viewBox="0 0 16 16"><path d="M7 2h2v1h1v1h1v1h1v1h1v2H9v6H7V8H3V6h1V5h1V4h1V3h1z"/></svg>
+          <span>Envoyer</span>
+        </button>
+        <div class="minor">
+          <button data-pick="media" class="cut ghost"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 2h14v12H1zM2 3v10h12V3zM3 12v-2h2V8h2v2h2V9h2v1h2v2zM10 4h2v2h-2z"/></svg>Photo</button>
+          <button id="textBtn" class="cut ghost"><svg viewBox="0 0 16 16"><path d="M2 2h12v3h-2V4H9v8h2v2H5v-2h2V4H4v1H2z"/></svg>Texte</button>
+        </div>
+      </div>
+      <p id="heroHint" class="hero-hint"></p>
+    </section>
+
+    <section id="tray" class="cut panel tray" hidden>
+      <div class="row">
+        <h2 class="label">Cargaison</h2>
+        <button id="trayClear" class="link">Tout retirer</button>
+      </div>
+      <p id="trayTitle" class="tray-title"></p>
+      <ul id="trayList" class="chips"></ul>
+      <button id="traySend" class="cut send wide" hidden></button>
+      <p id="trayHint" class="tray-hint"></p>
+    </section>
+
+    <section id="welcome" class="cut panel term welcome" hidden>
+      <h2 class="label">Init. liaison</h2>
+      <ol class="steps">
+        <li><b>Sur le PC</b>, colle ceci dans un terminal :
+          <div class="cmd"><code id="installCmd"></code><button class="cut copy" data-copy="installCmd">Copier</button></div>
+        </li>
+        <li><b>Scanne le QR code</b> qui s'affiche avec l'appareil photo du téléphone.</li>
+        <li><b>C'est tout.</b> Ton PC apparaît ici, touche-le pour lui envoyer des fichiers.</li>
+      </ol>
+      <p class="hint">Déjà installé ? Lance <code>pasta pair</code> sur le PC.</p>
+    </section>
+
+    <section id="welcomePc" class="cut panel term welcome" hidden>
+      <h2 class="label">Relier un téléphone</h2>
+      <ol class="steps">
+        <li><b>Même Wi-Fi</b> : le téléphone et ce PC doivent être sur le même réseau.</li>
+        <li><b>Scanne ce QR code</b> avec l'appareil photo du téléphone.
+          <div class="qr"><img id="qrImg" alt="QR code d'appairage" width="240" height="240"></div>
+          <code id="pairLink" class="pair-link"></code>
+        </li>
+        <li><b>Installe l'appli</b> sur le téléphone : menu du navigateur → « Installer » ou « Ajouter à l'écran d'accueil ».</li>
+      </ol>
+    </section>
+
+    <section id="devicesWrap" hidden>
+      <div class="row">
+        <h2 class="label">Cibles</h2>
+        <div class="row-actions">
+          <button id="editDevices" class="tag">Modifier</button>
+          <button id="addPc" class="tag">+ Ajouter</button>
+        </div>
+      </div>
+      <ul id="devices" class="devices"></ul>
+      <p id="noneOnline" class="empty" hidden></p>
+    </section>
+
+    <section id="transfersWrap" hidden>
+      <div class="row">
+        <h2 class="label">Journal</h2>
+        <div class="row-actions">
+          <button id="saveAll" class="tag" hidden>Tout enregistrer</button>
+          <button id="clearTransfers" class="tag">Effacer</button>
+        </div>
+      </div>
+      <ul id="transfers" class="cut panel term log"></ul>
+    </section>
+  </main>
+
+  <dialog id="textDlg">
+    <form method="dialog">
+      <div class="row">
+        <h2 class="label">Transmettre du texte</h2>
+        <button id="pasteBtn" type="button" class="tag" hidden>Coller</button>
+      </div>
+      <textarea id="textIn" rows="5" placeholder="Un lien, une note, un mot de passe…"></textarea>
+      <div class="dlg-btns">
+        <button value="cancel" class="cut ghost">Annuler</button>
+        <button id="textOk" value="ok" class="cut send small">Ajouter</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input type="file" id="picker" multiple hidden>
+  <input type="file" id="pickerMedia" multiple accept="image/*,video/*" hidden>
+  <div id="toast" class="toast" role="status"><span></span><button hidden></button></div>
+  <div class="droplabel">Dépose ici, ou sur une cible</div>
+  <script src="app.js"></script>
+</body>
+</html>
