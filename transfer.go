@@ -4,10 +4,12 @@ package main
 // {"type":"meta",name,size,mime} → morceaux binaires → {"type":"done"} → le receveur répond {"type":"ok"}.
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"mime"
 	"os"
@@ -201,25 +203,93 @@ func (d *daemon) send(ch *channel, src source, x *xfer) error {
 	}
 }
 
+// item : un fichier du disque à envoyer, sous un nom donné (un dossier part en .zip)
+type item struct{ path, name string }
+
+// prepare transforme les dossiers en archives .zip temporaires (sans compression : c'est plus rapide)
+func prepare(paths []string) ([]item, func(), error) {
+	var items []item
+	var tmps []string
+	cleanup := func() {
+		for _, t := range tmps {
+			os.Remove(t)
+		}
+	}
+	for _, p := range paths {
+		st, err := os.Stat(p)
+		if err != nil {
+			cleanup()
+			return nil, nil, err
+		}
+		if !st.IsDir() {
+			items = append(items, item{p, filepath.Base(p)})
+			continue
+		}
+		z, err := zipDir(p)
+		if err != nil {
+			cleanup()
+			return nil, nil, fmt.Errorf("archive de %s : %w", filepath.Base(p), err)
+		}
+		tmps = append(tmps, z)
+		items = append(items, item{z, filepath.Base(p) + ".zip"})
+	}
+	return items, cleanup, nil
+}
+
+func zipDir(dir string) (string, error) {
+	out, err := os.CreateTemp("", "pasta-*.zip")
+	if err != nil {
+		return "", err
+	}
+	zw := zip.NewWriter(out)
+	parent := filepath.Dir(dir)
+	err = filepath.WalkDir(dir, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() || !e.Type().IsRegular() {
+			return err
+		}
+		rel, _ := filepath.Rel(parent, p)
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: filepath.ToSlash(rel), Method: zip.Store, Modified: time.Now()})
+		if err != nil {
+			return err
+		}
+		f, err := os.Open(p)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		_, err = io.Copy(w, f)
+		return err
+	})
+	if cerr := zw.Close(); err == nil {
+		err = cerr
+	}
+	out.Close()
+	if err != nil {
+		os.Remove(out.Name())
+		return "", err
+	}
+	return out.Name(), nil
+}
+
 // sendPaths envoie des fichiers du disque à un téléphone (utilisé par « pasta send »)
-func (d *daemon) sendPaths(sl *slot, paths []string) error {
+func (d *daemon) sendPaths(sl *slot, items []item) error {
 	ch, err := d.openChannel(sl)
 	if err != nil {
 		return err
 	}
 	defer ch.dc.Close()
-	for _, p := range paths {
-		f, err := os.Open(p)
+	for _, it := range items {
+		f, err := os.Open(it.path)
 		if err != nil {
 			return err
 		}
 		st, err := f.Stat()
-		if err != nil || st.IsDir() {
+		if err != nil {
 			f.Close()
-			return fmt.Errorf("%s n'est pas un fichier", p)
+			return err
 		}
-		x := d.newXfer("out", filepath.Base(p), st.Size(), d.phoneName(sl))
-		err = d.send(ch, source{filepath.Base(p), st.Size(), f}, x)
+		x := d.newXfer("out", it.name, st.Size(), d.phoneName(sl))
+		err = d.send(ch, source{it.name, st.Size(), f}, x)
 		f.Close()
 		d.finish(x, err)
 		if err != nil {

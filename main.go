@@ -83,14 +83,25 @@ func runSend(args []string) {
 	if res.StatusCode != http.StatusOK {
 		fail(res.Status)
 	}
+	// lancé depuis le clic droit, il n'y a pas de terminal : on tient l'utilisateur au courant par notifications
 	sc := bufio.NewScanner(res.Body)
 	last := ""
+	var names []string
 	for sc.Scan() {
 		last = sc.Text()
 		fmt.Println(strings.TrimPrefix(last, "ERR "))
+		switch {
+		case strings.HasPrefix(last, "En attente"):
+			notify("Ouvre Pasta sur ton téléphone pour recevoir")
+		case strings.HasPrefix(last, "→ "):
+			names = append(names, strings.TrimPrefix(last, "→ "))
+		}
 	}
 	if strings.HasPrefix(last, "ERR ") {
 		fail(strings.TrimPrefix(last, "ERR "))
+	}
+	if last == "OK" {
+		notify(fmt.Sprintf("%d élément(s) envoyé(s) à %s ✓", len(paths), strings.Join(names, ", ")))
 	}
 }
 
@@ -104,6 +115,8 @@ func runUninstall() {
 	home, _ := os.UserHomeDir()
 	os.Remove(filepath.Join(home, ".config/systemd/user/pasta.service"))
 	os.Remove(filepath.Join(home, ".local/share/nautilus/scripts/Envoyer avec Pasta"))
+	os.Remove(filepath.Join(home, ".local/share/applications/pasta-share.desktop"))
+	os.Remove(filepath.Join(home, ".local/share/icons/pasta-share.png"))
 	os.RemoveAll(configDir())
 	if exe, err := os.Executable(); err == nil {
 		os.Remove(exe)

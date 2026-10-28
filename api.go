@@ -132,12 +132,17 @@ func (d *daemon) serveAPI() error {
 			http.Error(w, "aucun fichier", http.StatusBadRequest)
 			return
 		}
+		items, cleanup, err := prepare(req.Paths)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		defer cleanup()
 		out := bufio.NewWriter(w)
 		say := func(s string) { out.WriteString(s + "\n"); out.Flush(); w.(http.Flusher).Flush() }
 		targets := d.online()
 		if len(targets) == 0 {
 			say("En attente… ouvre Pasta sur ton téléphone (Ctrl+C pour annuler)")
-			go notify("Ouvre Pasta sur ton téléphone pour recevoir")
 			if targets = d.waitOnline(10 * time.Minute); len(targets) == 0 {
 				say("ERR Aucun appareil en ligne, envoi annulé.")
 				return
@@ -146,11 +151,9 @@ func (d *daemon) serveAPI() error {
 		ok := true
 		for _, sl := range targets {
 			say("→ " + d.phoneName(sl))
-			if err := d.sendPaths(sl, req.Paths); err != nil {
+			if err := d.sendPaths(sl, items); err != nil {
 				say(fmt.Sprintf("ERR Échec vers %s : %v", d.phoneName(sl), err))
 				ok = false
-			} else {
-				go notify(fmt.Sprintf("%d fichier(s) envoyé(s) à %s", len(req.Paths), d.phoneName(sl)))
 			}
 		}
 		if ok {

@@ -273,7 +273,8 @@ func (d *daemon) state() map[string]any {
 	defer d.mu.Unlock()
 	phones := []phoneInfo{}
 	for _, s := range d.cfg.Secrets {
-		if sl := d.slots[s]; sl != nil {
+		// un appairage n'apparaît qu'une fois que le téléphone s'est connecté (QR scanné)
+		if sl := d.slots[s]; sl != nil && (sl.online || d.cfg.Phones[s] != "") {
 			phones = append(phones, phoneInfo{sl.cr.id, d.phoneName(sl), sl.online})
 		}
 	}
